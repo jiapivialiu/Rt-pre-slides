@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Effective reproduction number estimation with trend filtering</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Jiaping(Olivia) Liu" />
+    <meta name="date" content="2023-07-21" />
+    <script src="index_files/header-attrs/header-attrs.js"></script>
+    <link rel="stylesheet" href="src/xaringan-themer.css" type="text/css" />
+    <link rel="stylesheet" href="src/slides-style.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+
+
+
+
+
+
+layout: true
+
+---
+
+background-image: url("gfx/bg.png")
+background-size: 78%
+background-position: right bottom
+
+## Effective reproduction number estimation with trend filtering
+
+#### Jiaping(Olivia) Liu&lt;sup&gt;1&lt;/sup&gt;, Zhenglun Cai&lt;sup&gt;2&lt;/sup&gt;, Paul Gustafson&lt;sup&gt;1&lt;/sup&gt;, Daniel J. McDonald&lt;sup&gt;1&lt;/sup&gt;. &lt;br&gt; Department of Statistics&lt;sup&gt;1&lt;/sup&gt; and Centre for Health Evaluation and Outcome Sciences&lt;sup&gt;2&lt;/sup&gt;, UBC. &lt;br&gt; July 21, 2023.
+
+&lt;br/&gt;&lt;br/&gt;&lt;br/&gt;&lt;br/&gt;&lt;br/&gt;&lt;br/&gt;&lt;br/&gt;&lt;br/&gt;&lt;br/&gt;&lt;br/&gt;
+
+---
+
+## Modelling the effective reproduction number `\(\mathcal{R}_t\)` 
+
+- `\(\mathcal{R}_t\)` (at time `\(t\)`) is the expected number of &lt;span style="color: orange;"&gt;secondary&lt;/span&gt; infections caused by a &lt;span style="color: orange;"&gt;primary&lt;/span&gt; infection in a population. 
+
+--
+
+- Let `\(\mathcal{R}_t = \frac{N_t / c}{\sum_{i=1}^{\Phi_t} p_i (N_{t-i}/c)}\)`, where 
+
+  - Assume a constant rate `\(c\)` of observed infections over all infections. 
+  
+--
+  
+  - &lt;span style="color: orange;"&gt;Secondary&lt;/span&gt; cases: `\(N_t/c\)` is the *true* number of all infected cases at time `\(t\)` and `\(N_t\)` is the *observed* one. 
+  
+--
+  - &lt;span style="color: orange;"&gt;Primary&lt;/span&gt; cases: 
+  &lt;!-- weighted sum of infections in the past few observations (from time `\(t-1\)` to `\(t-\Phi_t\)`). --&gt;
+  
+      - `\(\sum_{i=1}^{\Phi_t} p_i (N_{t-i}/c)\)` is the *true* total **infectious** cases at `\(t\)` and `\(\sum_{i=1}^{\Phi_t} p_i N_{t-i}\)` is the *observed* total. &lt;!-- (that are confirmed prior to `\(t\)`) --&gt;
+
+--
+      - `\(p_i\)` is the probability of generation time (between infections), approximated by serial interval (between symptom onsets). 
+      
+          - Assume the independence between the serial interval `\(p_i\)` and calendar time `\(t\)`.
+
+`\(\DeclareMathOperator*{\argmin}{argmin}\)`
+
+---
+## Modelling the effective reproduction number `\(\mathcal{R}_t\)`
+
+- `\(N_t = \sum_{i=1}^{\Phi_t} p_i\mathcal{R}_t N_{t-i}\)` is the well-known ***renewal equation***, where `\(p_i \mathcal{R}_t\)` represents the infectiousness at `\(i\)`. 
+--
+
+- Assume the observed daily infections `\(y_t \sim Pois(N_t)\)` at `\(t\)`.
+  
+  - Let `\(w_t := \sum_{i=1}^{\Phi_t} p_i N_{t-i}\)`.
+  
+  - Renewal equation is `\(N_t = w_t \mathcal{R}_t\)`, and then `\(y_t \sim Pois(w_t \mathcal{R}_t)\)`.
+  
+  - Assume &lt;span style="color: orange;"&gt;serial interval&lt;/span&gt; is known and follows a Gamma distribution.
+  
+---
+
+## Modelling the effective reproduction number `\(\mathcal{R}_t\)`
+
+The probability `\(p\)` is a theoretical probability of (discretized) serial interval between a certain period (e.g., a day). 
+
+
+```r
+hist(rgamma(1e3L, 2.5, scale=2.5), prob=T, main="Density of Gamma distribution with shape = 2.5, scale = 2.5", xlab="", ylim=c(0,.13), breaks=30)
+curve(dgamma(x, shape = 2.5, scale = 2.5), add=T, col="#ffa319", lwd=2)
+```
+
+&lt;img src="index_files/figure-html/unnamed-chunk-1-1.svg" width="100%" style="display: block; margin: auto;" /&gt;
+
+&lt;!-- Find the probabilities between discretized intervals corresponding to the time prior to `\(t\)`, and then reweighted the probabilities by their sum so they have the sum of one. --&gt;
+
+---
+## Modelling the effective reproduction number `\(\mathcal{R}_t\)`
+
+- &lt;span style="color: gray;"&gt; `\(N_t = \sum_{i=1}^{\Phi_t} p_i\mathcal{R}_t N_{t-i}\)` is the well-known renewal equation, where `\(p_i \mathcal{R}_t\)` represents the infectiousness at `\(i\)`.&lt;/span&gt;
+
+- &lt;span style="color: gray;"&gt;Assume the observed daily infections `\(y_t \sim Pois(N_t)\)` at time `\(t\)`.
+&lt;/span&gt;
+
+  - &lt;span style="color: gray;"&gt; Let `\(w_t := \sum_{i=1}^{\Phi_t} p_i N_{t-i}\)`, which is the weight sum of infections prior to time `\(t\)`. &lt;/span&gt;
+  
+  - &lt;span style="color: gray;"&gt; `\(N_t = w_t \mathcal{R}_t\)`, and then `\(y_t \sim Pois(w_t \mathcal{R}_t)\)`.&lt;/span&gt;
+  
+  - &lt;span style="color: gray;"&gt; Assume serial interval function follows a Gamma distribution.
+&lt;/span&gt;
+
+      - Given `\(\Phi_t\)`, reweight `\(p_i\)` by `\(\sum_{i=1}^{\Phi_t} p_i= 1\)` for each infected individual. 
+      - Approximate `\(w_t\)` by `\(\sum_{i=1}^{\Phi_t} p_i y_{t-i}\)`.
+
+---
+## Modelling the effective reproduction number `\(\mathcal{R}_t\)`
+
+- Given `\(y_t\)` and `\(w_t\)` for all `\(t\)`, estimate `\(\mathcal{R}_t\)`? 
+
+  - Maximize the likelihood of joint distribution of `\(\mathcal{R}_t\)`, i.e., `\(\prod_{t=1}^n \mathbb{P}(\mathcal{R}_t \mid y_t, w_t)\)`.
+    
+      - Let `\(\theta_t := \log(\mathcal{R}_t) \in \mathbb{R}\)`. Maximize `\(\sum_{t=1}^n y_t \theta_t - w_t e^{\theta_t}\)`.
+
+--
+
+  - Temporal evolution of `\(\mathcal{R}_t\)`? 
+  
+      - Regularize similarity (divided differences) across neighboring `\(\theta_j\)`, `\(j=t,...,t-k-1\)` for an arbitrary degree  `\(k=0,1,\dots\)`. 
+      
+        - Trend filtering penalty `\({\left\lVert D^{(k+1)} \theta\right\rVert}_1\)`, where the divided difference operator `\(D^{(k+1)}\)` is a banded matrix. 
+      
+        - `\(\ell_1\)` penalty: Local adaptivity, i.e., heterogeneous smoothness. 
+
+        - Divided difference &amp; banded operator: low computational cost.
+
+&lt;!-- (i.e., binomial coefficients of `\(k+1 \choose j\)` for `\(j=0,...,k+1\)`) --&gt; 
+
+---
+## Modelling the effective reproduction number `\(\mathcal{R}_t\)`
+
+&lt;div style="display: flex; justify-content: center;"&gt;
+  &lt;img src="gfx/tfline.png" width=900" height="500"&gt;
+&lt;/div&gt;
+
+### Various orders of divided differences results in different levels of smoothness. 
+
+---
+## Modelling the effective reproduction number `\(\mathcal{R}_t\)`
+
+Divided difference operator is a banded matrix with shrinking numbers of rows for higher degrees `\(k=0,1,\dots\)`
+
+--
+
+.pull-left[
+For example, `\(D^{(1)}\)` and `\(D^{(2)}\)` are respectively  
+
+```
+##      [,1] [,2] [,3] [,4] [,5]
+## [1,]   -1    1    0    0    0
+## [2,]    0   -1    1    0    0
+## [3,]    0    0   -1    1    0
+## [4,]    0    0    0   -1    1
+```
+
+```
+##      [,1] [,2] [,3] [,4] [,5]
+## [1,]    1   -2    1    0    0
+## [2,]    0    1   -2    1    0
+## [3,]    0    0    1   -2    1
+```
+]
+
+--
+
+.pull-right[
+Each row of order `\(k+1\)` defines the `\((k+2)\)`nd row in Yanghui's or Pascal's triangle  with alternating signs.
+![pascal](gfx/pascal.gif)
+]
+
+---
+## Modelling the effective reproduction number `\(\mathcal{R}_t\)`
+
+Let `\(\theta_t := \log(\mathcal{R}_t) \in \mathbb{R}\)`. Given `\(w_t\)` and `\(y_t\)`, we define the model as 
+`$$\hat{\theta} = \underset{\theta\in\mathbb{R}^n}{\argmin} \frac{1}{n}\sum_{t=1}^n -y_t \theta_t + w_t e^{\theta_t} + \lambda {\left\lVert D^{(k+1)} \theta \right\rVert}_1$$`
+with an arbitrary order `\(k=0,1,2,\dots\)` and tuning parameter `\(\lambda\)`.
+
+&lt;!--  - Divided difference matrix `\(D^{(k+1)}\)` defines the divided differences across neighboring `\(\theta_t\)`s. --&gt;
+
+--
+
+### * Trend filtering with Poisson loss on univariate data
+
+- Convex (proximal) optimization problem with a global optimum.
+
+- Solve it by proximal Newton method. 
+
+&lt;!-- - For example, `\(k=0\)` corresponds to `\({\left\lVert \theta_{t-1} - \theta_t \right\rVert}\)`, and `\(k=1\)` corresponds to `\({\left\lVert \theta_{t-2} -2\theta_{t-1} + \theta_t \right\rVert}\)`. --&gt;
+
+---
+## Solving the trend filtering with Poisson loss
+
+Approximation (Newton's method) + decomposition (specialized ADMM).
+
+--
+
+At iterate `\(t+1\)`: 
+
+- Approximate the Poisson loss and solve the *weighted Gaussian trend filtering* `$$\theta^{t_+} :=  \underset{\theta\in\mathbb{R}^n}{\arg\min} \frac{1}{2n} {\left\lVert \theta - c^{t} \right\rVert}_{W^t}^2 + \lambda {\left\lVert D^{(k+1)}\theta \right\rVert}_1,$$` where `\(a^T W a := {\lVert a \rVert}_W^2\)`, `\(c^t\)` is the Gaussianized data and `\(W^t\)` is the weight. ***Solve it using specialized ADMM [Ramdas et al., 2016].***
+
+--
+
+- Backtracking linesearch: `$${\theta}^{t+1} \leftarrow {\theta}^t + s^{t+1} ({\theta}^{t_+} - {\theta}^t),$$` where `\(s^{t+1}\)` is the step size.
+
+- Convergence of objectives.
+
+---
+## Empirical comparison using synthetic data with EpiEstim
+
+### Experimental design
+
+- Generate signal `\(y_t\)` from `\(y_t \sim Pois(N_t)\)`.
+
+  - Compute true means `\(N_t\)` using renewal equation using `\(N_t = \sum_{i=1}^{\Phi_t} p_i\mathcal{R}_t N_{t-i}\)` given `\(N_1=2\)` and `\(\Phi_t=t-1\)`.
+  
+  - `\(\mathcal{R}\)` follows a step function applied by boxcar kernel of length 10 for 10 times. 
+  
+  - Suppose serial interval follows Gamma with scale 2.5 and shape 2.5. 
+  
+- Generate `\(30\)` repeated samples of length `\(700\)`. 
+
+--
+
+- What if assumptions are violated?   
+      - *Synthetic data 2* (when smoothing assumption is violated): `\(\mathcal{R}\)` follows a step function without boxcar kernel transformation.
+      
+      - *Synthetic data 3* (when Poisson assumption is violated): `\(y_t\)` follows `\(NB(N_t, r)\)`, where `\(r\)` is the overdispersion parameter.Let `\(N_1=8, r=8\)`.
+
+---
+## Empirical comparison using synthetic data with EpiEstim
+
+### Evaluation metrics
+
+- Compute `\(\hat{\mathcal{R}}\)` and compute 
+  
+  - Rooted mean squared error (RMSE): `\(\sqrt{(\hat{\mathcal{R}} − R_{true})^2}/n\)`.
+
+- Compute `\(\hat{N}\)` using `\(\hat{\mathcal{R}}\)` and renewal equation, and compare
+
+  - Rooted mean absolute error (RMAE): `\({\left\lvert \hat{N} - N \right\rvert}_1 / n\)`.
+
+### Settings of EpiEstim 
+
+- EpiEstim estimates `\(\mathcal{R}_t\)` using a Bayesian framework assuming Poisson incidences and Gamma prior of `\(\mathcal{R}_t\)`. 
+
+- EpiEstim’s depends on a sliding window. We use length 7. 
+
+
+---
+## Empirical comparison using synthetic data with EpiEstim
+
+### *Synthetic data 1*
+
+.pull-left[
+Display an example case.
+
+&lt;div style="display: flex; justify-content: left;"&gt;
+&lt;img src="gfx/d1_plot.png" alt="dat1" style="width:100%;" /&gt;
+&lt;/div&gt;
+]
+
+.pull-right[
+Prediction error (RMSE above and RMAE below) over 30 repeated samples.
+
+&lt;div style="display: flex; justify-content: right;"&gt;
+&lt;img src="gfx/single_e1.png" alt="dat30" style="width:100%;" /&gt;
+&lt;/div&gt;
+]
+
+---
+## Empirical comparison using synthetic data with EpiEstim
+
+### *Synthetic data 2* (when smoothing assumption is violated)
+
+.pull-left[
+Display an example case.
+
+&lt;div style="display: flex; justify-content: left;"&gt;
+&lt;img src="gfx/d0_plot.png" alt="dat1_2" style="width:100%;" /&gt;
+&lt;/div&gt;
+]
+
+.pull-right[
+Prediction error (RMSE above and RMAE below) over 30 repeated samples.
+
+&lt;div style="display: flex; justify-content: right;"&gt;
+&lt;img src="gfx/single_e2.png" alt="dat30_2" style="width:100%;" /&gt;
+&lt;/div&gt;
+]
+
+---
+## Empirical comparison using synthetic data with EpiEstim
+
+### *Synthetic data 3* (when Poisson assumption is violated)
+
+.pull-left[
+Display an example case.
+
+&lt;div style="display: flex; justify-content: left;"&gt;
+&lt;img src="gfx/d2_plot.png" alt="dat1_3" style="width:100%;" /&gt;
+&lt;/div&gt;
+]
+
+.pull-right[
+Prediction error (RMSE above and RMAE below) over 30 repeated samples.
+
+&lt;div style="display: flex; justify-content: right;"&gt;
+&lt;img src="gfx/single_e3.png" alt="dat30_3" style="width:100%;" /&gt;
+&lt;/div&gt;
+]
+
+---
+## Empirical comparison using synthetic data with EpiEstim
+
+### &lt;span style="color: gray;"&gt; Evaluation metrics &lt;/span&gt;
+
+- &lt;span style="color: gray;"&gt; Compute `\(\hat{\mathcal{R}}\)` and compute &lt;/span&gt;
+  
+  - &lt;span style="color: gray;"&gt; Rooted mean squared error (RMSE): `\(\sqrt{(\hat{\mathcal{R}} − R_{true})^2}/n\)`.&lt;/span&gt;
+
+- &lt;span style="color: gray;"&gt; Compute `\(\hat{N}\)` using `\(\hat{\mathcal{R}}\)` and renewal equation, and compare &lt;/span&gt;
+
+  - &lt;span style="color: gray;"&gt; Rooted mean absolute error (RMAE): `\({\left\lvert \hat{N} - N \right\rvert}_1 / n\)`. &lt;/span&gt;
+
+### Main findings 
+
+- RtEstim outperforms EpiEstim in terms of accuracy of effective reproduction number estimation. 
+
+- RtEstim is robust in the violation of smoothness and distributional assumptions. 
+
+---
+## Covid-19 data application
+
+Covid-19 daily confirmed counts between March 1st, 2020 and April 15th, 2023 in British Columbia, Canada. 
+Data is available as of May 18, 2023 reported by B.C. Center of Disease Control. 
+
+.pull-left-narrow[
+If `\(\mathcal{R}\geq 1\)`,
+the infections expand.
+
+If `\(\mathcal{R}&lt; 1\)`,
+the pandemic dies out.
+]
+
+.pull-right-wide[
+![graph](gfx/covid19.png)
+]
+
+---
+## Discussions
+
+- Imputation of missing values? 
+
+  - Linear interpolation for NAs missting at random.
+
+- Select hyperparameter `\(\lambda\)`?
+
+  - Leave-every-k-th-out cross validation.
+
+- Compute for `\(\lambda\)` sequences? 
+
+  - Path algorithm for descending `\(\lambda\)` sequences.
+
+---
+
+class: center, middle
+
+# Thank you for listening!
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script src="src/macros.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"ratio": "16:9",
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

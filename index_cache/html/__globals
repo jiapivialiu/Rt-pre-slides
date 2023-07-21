@@ -1,0 +1,13 @@
+xaringan-themer	::	c	google_font	library	lighten_color	style_duo_accent
+unnamed-chunk-1	c	curve	dgamma	hist	rgamma	T	x
+unnamed-chunk-2	diag	diff	print
+unnamed-chunk-3	diag	diff	print
+echo	curve	dgamma	hist	rgamma	T	x
+setup	::	$	library	options
+unnamed-chunk-5	diag	diff	print
+unnamed-chunk-6	$	c	curve	dgamma	hist	length	rep	rgamma	T	x
+unnamed-chunk-4	diag	diff	print
+unnamed-chunk-7	diag	diff	print
+unnamed-chunk-8	diag	diff	print
+unnamed-chunk-15	curve	dgamma	x
+unnamed-chunk-16	diag	diff	print
