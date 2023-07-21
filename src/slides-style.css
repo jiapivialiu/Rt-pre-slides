@@ -280,6 +280,11 @@ div.my-footer span {
     margin-top: -1in;
 }
 
+/* Define a class to hide slides */
+.hidden-slide {
+  display: none;
+}
+
 .const {color: #5E3C99;}
 .accel {color: #B2ABD2;}
 .decel {color: #FDB863;}

@@ -81,38 +81,44 @@ background-position: right bottom
 
 ## Modelling the effective reproduction number $\mathcal{R}_t$ 
 
-- $\mathcal{R}_t$ (at time $t$) is the expected number of <span style="color: orange;">secondary</span> infections caused by a <span style="color: orange;">primary</span> infection in a population. 
+$\mathcal{R}_t$ (at time $t$) is the expected number of <span style="color: orange;">secondary</span> infections caused by a <span style="color: orange;">primary</span> infection in a population. 
 
 --
 
-- Let $\mathcal{R}_t = \frac{N_t / c}{\sum_{i=1}^{\Phi_t} p_i (N_{t-i}/c)}$, where 
+Let $\mathcal{R}_t = \frac{N_t / c}{\sum_{i=1}^{\Phi_t} p_i N_{t-i}/c}$, where 
 
-  - Assume a constant rate $c$ of observed infections over all infections. 
-  
 --
+
+.pull-left[
+- Assume a constant proportion $c$ of observable infections over all infections. 
+
+- <span style="color: orange;">Secondary</span> cases: $N_t/c$ is the total infections at time $t$ and $N_t$ is the *observable* one. 
   
-  - <span style="color: orange;">Secondary</span> cases: $N_t/c$ is the *true* number of all infected cases at time $t$ and $N_t$ is the *observed* one. 
-  
---
-  - <span style="color: orange;">Primary</span> cases: 
+- <span style="color: orange;">Primary</span> cases: 
   <!-- weighted sum of infections in the past few observations (from time $t-1$ to $t-\Phi_t$). -->
-  
-      - $\sum_{i=1}^{\Phi_t} p_i (N_{t-i}/c)$ is the *true* total **infectious** cases at $t$ and $\sum_{i=1}^{\Phi_t} p_i N_{t-i}$ is the *observed* total. <!-- (that are confirmed prior to $t$) -->
+
+  $\sum_{i=1}^{\Phi_t} p_i N_{t-i}/c$ is the total **infectious** cases at $t$ and $\sum_{i=1}^{\Phi_t} p_i N_{t-i}$ is the *observable* total. <!-- (that are confirmed prior to $t$) -->
+]
 
 --
-      - $p_i$ is the probability of generation time (between infections), approximated by serial interval (between symptom onsets). 
+
+.pull-right[
+- $p_i$ is the probability that a primary infection at $t-i$ causes a secondary infection at $t$.
       
-          - Assume the independence between the serial interval $p_i$ and calendar time $t$.
+  - Approximate the generation time (between infections) by <span style="color: orange;">serial interval</span> (between symptom onsets). 
+
+  - Assume the independence between the serial interval and calendar time $t$. 
+]
 
 $\DeclareMathOperator*{\argmin}{argmin}$
 
 ---
 ## Modelling the effective reproduction number $\mathcal{R}_t$
 
-- $N_t = \sum_{i=1}^{\Phi_t} p_i\mathcal{R}_t N_{t-i}$ is the well-known ***renewal equation***, where $p_i \mathcal{R}_t$ represents the infectiousness at $i$. 
+$\mathcal{R}_t = \frac{N_t / c}{\sum_{i=1}^{\Phi_t} p_i N_{t-i}/c}\Rightarrow N_t = \sum_{i=1}^{\Phi_t} p_i\mathcal{R}_t N_{t-i}$ is the well-known <span style="color: orange;">renewal equation</span>, where $p_i \mathcal{R}_t$ represents the infectiousness at $i$. 
 --
 
-- Assume the observed daily infections $y_t \sim Pois(N_t)$ at $t$.
+- Assume the daily infections $y_t \sim Pois(N_t)$ at $t$.
   
   - Let $w_t := \sum_{i=1}^{\Phi_t} p_i N_{t-i}$.
   
@@ -126,7 +132,7 @@ $\DeclareMathOperator*{\argmin}{argmin}$
 
 The probability $p$ is a theoretical probability of (discretized) serial interval between a certain period (e.g., a day). 
 
-```{r echo=TRUE}
+```{r echo=FALSE}
 hist(rgamma(1e3L, 2.5, scale=2.5), prob=T, main="Density of Gamma distribution with shape = 2.5, scale = 2.5", xlab="", ylim=c(0,.13), breaks=30)
 curve(dgamma(x, shape = 2.5, scale = 2.5), add=T, col="#ffa319", lwd=2)
 ```
@@ -148,29 +154,37 @@ curve(dgamma(x, shape = 2.5, scale = 2.5), add=T, col="#ffa319", lwd=2)
   - <span style="color: gray;"> Assume serial interval function follows a Gamma distribution.
 </span>
 
-      - Given $\Phi_t$, reweight $p_i$ by $\sum_{i=1}^{\Phi_t} p_i= 1$ for each infected individual. 
-      - Approximate $w_t$ by $\sum_{i=1}^{\Phi_t} p_i y_{t-i}$.
+- Given $\Phi_t$, reweight $p_i$ by $\sum_{i=1}^{\Phi_t} p_i= 1$ for each infected individual. 
+- Approximate $w_t$ by $\sum_{i=1}^{\Phi_t} p_i y_{t-i}$.
 
 ---
 ## Modelling the effective reproduction number $\mathcal{R}_t$
 
-- Given $y_t$ and $w_t$ for all $t$, estimate $\mathcal{R}_t$? 
+Given $y_t$ and $w_t$ for all $t$, estimate $\mathcal{R}_t$.
 
-  - Maximize the likelihood of joint distribution of $\mathcal{R}_t$, i.e., $\prod_{t=1}^n \mathbb{P}(\mathcal{R}_t \mid y_t, w_t)$.
+- Maximize the likelihood of $\mathcal{R}_t$, i.e., $\prod_t \mathcal{L}(\mathcal{R}_t\mid y_t, w_t)$.
     
-      - Let $\theta_t := \log(\mathcal{R}_t) \in \mathbb{R}$. Maximize $\sum_{t=1}^n y_t \theta_t - w_t e^{\theta_t}$.
+  - Let $\theta_t := \log(\mathcal{R}_t) \in \mathbb{R}$. Maximize $\sum_t y_t \theta_t - w_t e^{\theta_t}$.
 
 --
 
-  - Temporal evolution of $\mathcal{R}_t$? 
-  
-      - Regularize similarity (divided differences) across neighboring $\theta_j$, $j=t,...,t-k-1$ for an arbitrary degree  $k=0,1,\dots$. 
-      
-        - Trend filtering penalty ${\left\lVert D^{(k+1)} \theta\right\rVert}_1$, where the divided difference operator $D^{(k+1)}$ is a banded matrix. 
-      
-        - $\ell_1$ penalty: Local adaptivity, i.e., heterogeneous smoothness. 
+- Temporal evolution (smoothness) of $\mathcal{R}_t$.
 
-        - Divided difference & banded operator: low computational cost.
+  - Piecewise polynomial.
+  
+  - Penalize divided difference between neighboring $\theta_j$, $j=t,...,t-k-1$ for an arbitrary order. 
+
+  -  <span style="color: orange;">Trend filtering penalty</span> ${\lVert D^{(k+1)} \theta\rVert}_1$, where the divided difference operator $D^{(k+1)}$ is a banded matrix. 
+  
+<!--  - Regularize smoothness (divided differences) across neighboring $\mathcal{R}_t$. -->
+
+--
+
+#### Advantages: 
+
+- $\ell_1$ penalty: local adaptivity, i.e., heterogeneous smoothness. 
+
+- Divided difference & banded operator: low computational cost.
 
 <!-- (i.e., binomial coefficients of $k+1 \choose j$ for $j=0,...,k+1$) --> 
 
@@ -219,9 +233,9 @@ with an arbitrary order $k=0,1,2,\dots$ and tuning parameter $\lambda$.
 
 --
 
-### * Trend filtering with Poisson loss on univariate data
+- <span style="color: orange;"> Trend filtering with Poisson loss on univariate data. </span>
 
-- Convex (proximal) optimization problem with a global optimum.
+- Convex optimization problem with a global optimum.
 
 - Solve it by proximal Newton method. 
 
@@ -230,28 +244,29 @@ with an arbitrary order $k=0,1,2,\dots$ and tuning parameter $\lambda$.
 ---
 ## Solving the trend filtering with Poisson loss
 
-Approximation (Newton's method) + decomposition (specialized ADMM).
+Proximal Newton method: <span style="color: orange;"> Approximation</span> (Newton's method) + <span style="color: orange;"> Decomposition</span> (specialized ADMM).
 
 --
 
 At iterate $t+1$: 
 
-- Approximate the Poisson loss and solve the *weighted Gaussian trend filtering* $$\theta^{t_+} :=  \underset{\theta\in\mathbb{R}^n}{\arg\min} \frac{1}{2n} {\left\lVert \theta - c^{t} \right\rVert}_{W^t}^2 + \lambda {\left\lVert D^{(k+1)}\theta \right\rVert}_1,$$ where $a^T W a := {\lVert a \rVert}_W^2$, $c^t$ is the Gaussianized data and $W^t$ is the weight. ***Solve it using specialized ADMM [Ramdas et al., 2016].***
+- <span style="color: orange;">Approximate</span> the Poisson loss and solve the *weighted trend filtering* $$\theta^{t_+} :=  \underset{\theta\in\mathbb{R}^n}{\arg\min} \frac{1}{2n} {\left\lVert \theta - c^{t} \right\rVert}_{W^t}^2 + \lambda {\left\lVert D^{(k+1)}\theta \right\rVert}_1,$$ where $a^T W a := {\lVert a \rVert}_W^2$, $c^t$ is the "Gaussianized" data and $W^t$ is the weight. ***Solve it using specialized ADMM [Ramdas et al., 2016],*** which solves the problem in a <span style="color: orange;"> decomposed</span> way.
 
 --
 
 - Backtracking linesearch: $${\theta}^{t+1} \leftarrow {\theta}^t + s^{t+1} ({\theta}^{t_+} - {\theta}^t),$$ where $s^{t+1}$ is the step size.
 
-- Convergence of objectives.
+- Convergence of the objective.
 
 ---
+
 ## Empirical comparison using synthetic data with EpiEstim
 
 ### Experimental design
 
 - Generate signal $y_t$ from $y_t \sim Pois(N_t)$.
 
-  - Compute true means $N_t$ using renewal equation using $N_t = \sum_{i=1}^{\Phi_t} p_i\mathcal{R}_t N_{t-i}$ given $N_1=2$ and $\Phi_t=t-1$.
+  - Compute true means $N_t$ using renewal equation using <span style="color: orange;"> $N_t = \sum_{i=1}^{\Phi_t} p_i\mathcal{R}_t N_{t-i}$</span> given $N_1=2$ and $\Phi_t=t-1$.
   
   - $\mathcal{R}$ follows a step function applied by boxcar kernel of length 10 for 10 times. 
   
@@ -262,9 +277,9 @@ At iterate $t+1$:
 --
 
 - What if assumptions are violated?   
-      - *Synthetic data 2* (when smoothing assumption is violated): $\mathcal{R}$ follows a step function without boxcar kernel transformation.
+      - *Synthetic data 2* (when <span style="color: orange;"> smoothing assumption is violated</span>): $\mathcal{R}$ follows a step function without boxcar kernel transformation.
       
-      - *Synthetic data 3* (when Poisson assumption is violated): $y_t$ follows $NB(N_t, r)$, where $r$ is the overdispersion parameter.Let $N_1=8, r=8$.
+      - *Synthetic data 3* (when <span style="color: orange;"> Poisson assumption is violated</span>): $y_t$ follows $NB(N_t, r)$, where $r$ is the overdispersion parameter.Let $N_1=8, r=8$.
 
 ---
 ## Empirical comparison using synthetic data with EpiEstim
@@ -273,11 +288,13 @@ At iterate $t+1$:
 
 - Compute $\hat{\mathcal{R}}$ and compute 
   
-  - Rooted mean squared error (RMSE): $\sqrt{(\hat{\mathcal{R}} − R_{true})^2}/n$.
+  - Rooted mean squared error (<span style="color: orange;">RMSE</span>): $\sqrt{(\hat{\mathcal{R}} − R_{true})^2}/n$.
 
 - Compute $\hat{N}$ using $\hat{\mathcal{R}}$ and renewal equation, and compare
 
-  - Rooted mean absolute error (RMAE): ${\left\lvert \hat{N} - N \right\rvert}_1 / n$.
+  - Mean absolute error (<span style="color: orange;">MAE</span>): ${\left\lvert \hat{N} - N \right\rvert}_1 / n$.
+
+--
 
 ### Settings of EpiEstim 
 
@@ -285,69 +302,49 @@ At iterate $t+1$:
 
 - EpiEstim’s depends on a sliding window. We use length 7. 
 
+### Our RtEstim 
+
+- We provide the implementation in an R package, [rtestim](https://dajmcdon.github.io/rtestim/).
+
 
 ---
 ## Empirical comparison using synthetic data with EpiEstim
 
-### *Synthetic data 1*
+### *Example realization of synthetic data 1*
 
-.pull-left[
-Display an example case.
+
 
 <div style="display: flex; justify-content: left;">
-<img src="gfx/d1_plot.png" alt="dat1" style="width:100%;" />
+  <img src="gfx/d1_plot.png" alt="dat1" style="width:55%;" />
+  <img src="gfx/single_e1.png" alt="dat30" style="width:59%;" />
 </div>
-]
 
-.pull-right[
-Prediction error (RMSE above and RMAE below) over 30 repeated samples.
+.pull-right-narrow[Prediction error (RMSE above and MAE below) over 30 repeated samples.]
 
-<div style="display: flex; justify-content: right;">
-<img src="gfx/single_e1.png" alt="dat30" style="width:100%;" />
-</div>
-]
 
 ---
 ## Empirical comparison using synthetic data with EpiEstim
 
-### *Synthetic data 2* (when smoothing assumption is violated)
-
-.pull-left[
-Display an example case.
+### *Example realization of synthetic data 2* (when smoothing assumption is violated)
 
 <div style="display: flex; justify-content: left;">
-<img src="gfx/d0_plot.png" alt="dat1_2" style="width:100%;" />
+  <img src="gfx/d0_plot.png" alt="dat1_2" style="width:55%;" />
+  <img src="gfx/single_e2.png" alt="dat30_2" style="width:59%;" />
 </div>
-]
 
-.pull-right[
-Prediction error (RMSE above and RMAE below) over 30 repeated samples.
-
-<div style="display: flex; justify-content: right;">
-<img src="gfx/single_e2.png" alt="dat30_2" style="width:100%;" />
-</div>
-]
+.pull-right-narrow[Prediction error (RMSE above and MAE below) over 30 repeated samples.]
 
 ---
 ## Empirical comparison using synthetic data with EpiEstim
 
-### *Synthetic data 3* (when Poisson assumption is violated)
-
-.pull-left[
-Display an example case.
+### *Example realization of synthetic data 3* (when Poisson assumption is violated)
 
 <div style="display: flex; justify-content: left;">
-<img src="gfx/d2_plot.png" alt="dat1_3" style="width:100%;" />
+  <img src="gfx/d2_plot.png" alt="dat1_3" style="width:55%;" />
+  <img src="gfx/single_e3.png" alt="dat30_3" style="width:59%;" />
 </div>
-]
 
-.pull-right[
-Prediction error (RMSE above and RMAE below) over 30 repeated samples.
-
-<div style="display: flex; justify-content: right;">
-<img src="gfx/single_e3.png" alt="dat30_3" style="width:100%;" />
-</div>
-]
+.pull-right-narrow[Prediction error (RMSE above and MAE below) over 30 repeated samples.]
 
 ---
 ## Empirical comparison using synthetic data with EpiEstim
@@ -360,13 +357,13 @@ Prediction error (RMSE above and RMAE below) over 30 repeated samples.
 
 - <span style="color: gray;"> Compute $\hat{N}$ using $\hat{\mathcal{R}}$ and renewal equation, and compare </span>
 
-  - <span style="color: gray;"> Rooted mean absolute error (RMAE): ${\left\lvert \hat{N} - N \right\rvert}_1 / n$. </span>
+  - <span style="color: gray;"> Mean absolute error (MAE): ${\left\lvert \hat{N} - N \right\rvert}_1 / n$. </span>
 
 ### Main findings 
 
-- RtEstim outperforms EpiEstim in terms of accuracy of effective reproduction number estimation. 
+- RtEstim <span style="color: orange;">outperforms</span> EpiEstim in terms of accuracy of effective reproduction number estimation. 
 
-- RtEstim is robust in the violation of smoothness and distributional assumptions. 
+- RtEstim is <span style="color: orange;">robust</span> in the violation of smoothness and distributional assumptions. 
 
 ---
 ## Covid-19 data application
@@ -387,19 +384,21 @@ the pandemic dies out.
 ]
 
 ---
-## Discussions
+## Summary
 
-- Imputation of missing values? 
+We construct a convex optimization problem for effective reproduction number estimation. 
 
-  - Linear interpolation for NAs missting at random.
+It can be regarded as <span style="color: orange;">trend filtering with Poisson loss</span> on univariate data.
 
-- Select hyperparameter $\lambda$?
+- The estimators are piecewise-polynomials and locally adaptive.
 
-  - Leave-every-k-th-out cross validation.
+- Our model is <span style="color: orange;">computationally efficient</span>.
 
-- Compute for $\lambda$ sequences? 
+- The solver we use is proximal Newton method, but it is not the only choice. 
 
-  - Path algorithm for descending $\lambda$ sequences.
+- Our model is empirically more <span style="color: orange;">accurate</span> EpiEstim.
+
+- Our model is <span style="color: orange;">robust</span> in the violation of distributional and smoothness assumptions.
 
 ---
 
