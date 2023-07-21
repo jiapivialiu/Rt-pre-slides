@@ -154,7 +154,7 @@ curve(dgamma(x, shape = 2.5, scale = 2.5), add=T, col="#ffa319", lwd=2)
   - <span style="color: gray;"> Assume serial interval function follows a Gamma distribution.
 </span>
 
-- Given $\Phi_t$, reweight $p_i$ by $\sum_{i=1}^{\Phi_t} p_i= 1$ for each infected individual. 
+- Given $\Phi_t$, reweight $p_i$ so that $\sum_{i=1}^{\Phi_t} p_i=1$ for each infected individual. 
 - Approximate $w_t$ by $\sum_{i=1}^{\Phi_t} p_i y_{t-i}$.
 
 ---
@@ -310,41 +310,60 @@ At iterate $t+1$:
 ---
 ## Empirical comparison using synthetic data with EpiEstim
 
-### *Example realization of synthetic data 1*
-
-
+### *Synthetic data 1*
 
 <div style="display: flex; justify-content: left;">
   <img src="gfx/d1_plot.png" alt="dat1" style="width:55%;" />
   <img src="gfx/single_e1.png" alt="dat30" style="width:59%;" />
 </div>
 
-.pull-right-narrow[Prediction error (RMSE above and MAE below) over 30 repeated samples.]
+.pull-left[
+### Example realization
+]
+.pull-right-narrow[
+###Prediction error 
+
+(RMSE above and MAE below) over 30 repeated samples.
+]
 
 
 ---
 ## Empirical comparison using synthetic data with EpiEstim
 
-### *Example realization of synthetic data 2* (when smoothing assumption is violated)
+### *Synthetic data 2* (when smoothing assumption is violated)
 
 <div style="display: flex; justify-content: left;">
   <img src="gfx/d0_plot.png" alt="dat1_2" style="width:55%;" />
   <img src="gfx/single_e2.png" alt="dat30_2" style="width:59%;" />
 </div>
 
-.pull-right-narrow[Prediction error (RMSE above and MAE below) over 30 repeated samples.]
+.pull-left[
+### Example realization
+]
+.pull-right-narrow[
+###Prediction error 
+
+(RMSE above and MAE below) over 30 repeated samples.
+]
 
 ---
 ## Empirical comparison using synthetic data with EpiEstim
 
-### *Example realization of synthetic data 3* (when Poisson assumption is violated)
+### *Synthetic data 3* (when Poisson assumption is violated)
 
 <div style="display: flex; justify-content: left;">
   <img src="gfx/d2_plot.png" alt="dat1_3" style="width:55%;" />
   <img src="gfx/single_e3.png" alt="dat30_3" style="width:59%;" />
 </div>
 
-.pull-right-narrow[Prediction error (RMSE above and MAE below) over 30 repeated samples.]
+.pull-left[
+### Example realization
+]
+.pull-right-narrow[
+###Prediction error 
+
+(RMSE above and MAE below) over 30 repeated samples.
+]
 
 ---
 ## Empirical comparison using synthetic data with EpiEstim

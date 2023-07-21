@@ -8,17 +8,17 @@ Slide 2:
     Rt is the expected number of secondary infections caused by a primary infection in a population at time t.
     So it can be regarded as a rate. A rate of secondary infections over all primary infections at a specific time. 
     --
-    So now let's write Rt as a rate like in this fraction, where the numerator is the number of secondary infections ... the number of primary infections.
+    So now let's write Rt as a rate like in this fraction, where the numerator is the number of secondary infections and the denominator is the number of primary infections.
     --
     Here we assume a constant proportion of observable infections over all infections in nature, denoted by c.
     Nt denotes the number of observable infections at t, so Nt/c is the total number of infections at t.
     And it's the same for the primary infections.
-    --
     There are a few components in the function of primary infections. 
     In short, it is a weighted sum of previous infection counts over a certain period prior to time t. 
     where Phi_t is the certain period for time t, 
+	--
     and p_i is the probability that a primary infection at time t-i causes a secondary infection at time t. 
-    As you may realize that this period between the primary and secondary infections is called generation time. We approximate it by serial interval function, since generation time is unobservable. 
+    This period between the primary and secondary infections is the generation time. We approximate it by serial interval function, since generation time is unobservable. 
     Here we assume serial interval is independent to the calendar time t, which implies that its distribution is the same for all t. 
 
 Slide 3:
@@ -26,7 +26,7 @@ Slide 3:
     --
     We make a further assumption that the daily infections y_t at time t follows a Poisson distribution with mean of Nt.
     And we let w_t denote the primary infections. Then we get y_t follows Poisson of w_tRt. 
-    We assume the serial interval follows a Gamma distribution. Then we can compute the probability p_i and further compute w_t.
+    We assume the serial interval follows a Gamma distribution. Then we can compute the probability p_i and further compute w_t. 
 
 Slide 4:
     To be more specific on how the probabilities are calculated, let's see a simple demonstration. This is a histogram of the Gamma samples and its corresponding theoretical density curve. The probabilities are the cumulative probabilities between different contiguous ranges, like the ranges of the bins in the histogram, since we observe discretized timepoints. 
@@ -38,9 +38,9 @@ Slide 5:
 Slide 6:
     So then given y_t and w_t, we can compute Rt. An intuitive way is to find the MLE of Rt, since it's a parameter of Poisson distribution. And if we let theta represent the natural logarithm of Rt, the problem can be written as the sum of y_t\theta_t minus w_t exp(theta_t). 
     If we simply solve this problem, the estimated Rt's have a one-to-one correspondence with y_t's. But we don't want to do this, because, in this case, the estimated curves are going to be too wiggly.
-    We want to further assume the smoothness structure of Rt. Specifically, they are piecewise polynomials.
-    We regularize the similarity across neighboring Rt's. 
-    Here, we consider the divided difference between neighboring theta's with different orders. A higher order means the similarity across more neighboring theta's. 
+    --
+    We want to further assume the smoothness of Rt. Specifically, they are piecewise polynomials.
+    We regularize the similarity across neighboring Rt's by penalizing the divided difference between neighboring theta's with different orders. A higher order means the similarity across more neighboring theta's. 
     We use the ell_1 penalty. The ell_1 penalty here is exactly the trend filtering penalty, where the divided difference operator is a banded matrix. 
     --
     There are a couple of advantages of using this penalty. The estimators are locally adaptive, which means the estimators can be more wiggly in some regions and more smooth in the others. 
@@ -66,7 +66,7 @@ Slide 9:
     And we solve it by the proximal Newton method. 
 
 Slide 10:
-    The proximal Newton method, in short, involves approximation and decomposition. In general, it solves an approximate problem iteratively using the Newton's method and decompose the approximated problem into subproblems in each iterate. 
+    The proximal Newton method, in short, involves approximation and decomposition. In general, it solves an approximate problem iteratively using the Newton's method and solve each approximated problem in a decomposed way. 
     -- 
     More specifically, for each iterate, it replaces the Poisson loss by its second-order Taylor expansion. Like the way we solve the generalized linear regression using iteratively reweighted least squares. 
     And then the problem can be written as this minimization problem, which is the weighted trend filtering that can be solved using Ramdas's specialized ADMM. 
@@ -74,52 +74,52 @@ Slide 10:
     It's followed a backtracking linesearch algorithm to adjust the step size. And then the two steps run iteratively until the convergence of the objective. 
 
 Slide 11:
-    There are some other computational considerations. 
-
-Slide 12:
     Now, let's compare the empirical performance of our model to a widely used method, EpiEstim. 
     Let's design the experiments first. 
-    Ultimately, we need to generate y_t from Poisson distribution with mean Nt. 
-        Before this, we generate the N_t's following the renewal equation, where we compute p_i using Gamma with scale 2.5 and shape 2.5, generate R_t to be step function with boxcar kernel transformations, and assume the first infection N_1 to be 2. The infection period Phi_t is t-1, which implies we use all previous case counts. 
-    Then we repeat the whole step for 30 times to generate 30 random samples. Each sample has 700 observations.
+    Ultimately, we want to generate y_t from Poisson distribution with mean Nt. 
+        But before this, we need to generate the N_t's following the renewal equation. We compute p_i using Gamma with scale 2.5 and shape 2.5, generate R_t to be step function with boxcar kernel transformations, let the first infection N_1 be 2, and let the infection period Phi_t be t-1, which implies we use all previous case counts. 
+    We repeat the whole step for 30 times to generate 30 random samples. Each sample has 700 observations.
     --
     Then, we consider two alternative scenarios when an assumption is violated. 
     For the scenario where the smoothing assumption is violated, we use the step function directly to be the reproduction number. 
     For the scenario where the Poisson assumption is violated, we generate samples from negative binomial distribution with mean N_t and an overdispersion parameter r=8. 
 
-Slide 13:
+Slide 12:
     To evaluate the performance, we use rooted mean squared error to measure the deviation of the estimated reproduction number from the true reproduction number. 
     We use the estimated Rt to compute the estimated infections N^hat following the renewal equation. And then measure the distance using the mean absolute error. 
+    --
     We compare the performance of our model to EpiEstim, which is a Bayesian framework using the Poisson distributional assumption and Gamma prior of Rt. We set its sliding window to be 7 days.
+    --
+    We provide an R package rtestim to implement our model.
 
-Slide 14: 
+Slide 13: 
     These two figures shows the realization of the first scenario where all assumptions are satisfied. 
     The left figure shows a sample Rt and Nt, where the orange curves are our model (RtEstim), the blue curves are estimates of EpiEstim, and the gray lines are the true values, which are almost overlap with our estimates.
     The right figure shows the empirical performance. 
     We can see our model has a small RMSE and MAE compared to EpiEstim. 
 
-Slide 15:
+Slide 14:
     The second scenario uses the step function to be Rt. It has similar results as the first case.
 
-Slide 16:
+Slide 15:
     The third scenario has sample case counts generated following negative binomial distribution. And it draws similar conclusions as well.
 
-Slide 17:
+Slide 16:
     The main findings from the empirical evaluations are that 
     our model outperforms EpiEstim in terms of the accuracy of Rt estimation,
      and our model is robust in the violation of smoothness and distributional assumptions.
 
-Slide 18:
+Slide 17:
     This is an application on Covid-19 reproduction number estimation for British Columbia, Canada. We consider case counts between March 1st, 2020 and April 15, 2023.
     The up-left panel shows the case counts, and the following panels show the Piecewise-linear, quadratic and cubic Rt estimates with various lambda sequences. 
     We can tell that the infection expands when Rt is greater than 1, and the pandemic dies out when Rt is smaller than 1.
 
-Slide 19:
+Slide 18:
     Now, let's wrap it up. We construct a convex optimization problem for effective reproduction number estimation. It can be regarded as trend filtering with Poisson loss on univariate data.
     The estimators are piecewise-polynomials and locally adaptive. 
     It is computationally efficient.
     And it empirically outperforms EpiEstim regarding the accuracy of Rt.
     It is robust in the violation of distributional and smoothness assumptions.
 
-Slide 20:
+Slide 19:
     That's all. Thank you for listening! I'll happy to take any questions. 
